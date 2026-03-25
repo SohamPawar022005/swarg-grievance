@@ -1,38 +1,39 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import GovHeader from "@/components/GovHeader";
-import GovFooter from "@/components/GovFooter";
-import CitizenPage from "./pages/CitizenPage";
-import AdminDashboard from "./pages/AdminDashboard";
-import CompliancePage from "./pages/CompliancePage";
-import NotFound from "./pages/NotFound";
-
-const queryClient = new QueryClient();
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import GovHeader from '@/components/GovHeader';
+import GovFooter from '@/components/GovFooter';
+import CitizenPage from './pages/CitizenPage';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import NotFound from './pages/NotFound';
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-background">
-          <GovHeader />
-          <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<CitizenPage />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/compliance" element={<CompliancePage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <GovFooter />
-        </div>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <AuthProvider>
+    <BrowserRouter>
+      <Routes>
+        {/* Login page has its own layout */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Main layout for all other pages */}
+        <Route
+          path="*"
+          element={
+            <div className="app-layout">
+              <GovHeader />
+              <main className="app-main">
+                <Routes>
+                  <Route path="/" element={<CitizenPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+              <GovFooter />
+            </div>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  </AuthProvider>
 );
 
 export default App;
