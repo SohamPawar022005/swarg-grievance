@@ -10,7 +10,7 @@ import {
   CategoryBarChart, StatusPieChart, DistrictComparisonChart,
   TrendAreaChart, PriorityPieChart,
 } from '@/components/Charts';
-import MapboxGlobe from '@/components/MapboxGlobe';
+import GrievanceMap from '@/components/GrievanceMap';
 import AuditLogDirectory from '@/components/AuditLogDirectory';
 import { InvestigationModal, FlagModal, VigilanceModal } from '@/components/ActionModals';
 
@@ -62,7 +62,7 @@ const ComplianceDashboard = () => {
       {/* Map */}
       <div className="gov-card">
         <h3 className="gov-section-title">{t('compliance.map')}</h3>
-        <MapboxGlobe />
+        <GrievanceMap grievances={allComplaints} />
       </div>
 
       {/* AI Insights */}
