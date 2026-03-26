@@ -1,65 +1,73 @@
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   complaints, auditLogs, aiInsights, users,
   getPriorityBadgeClass, getStatusBadgeClass, getLevelLabel,
+  Complaint,
 } from '@/data/mockData';
 import {
   CategoryBarChart, StatusPieChart, DistrictComparisonChart,
   TrendAreaChart, PriorityPieChart,
 } from '@/components/Charts';
 import MapboxGlobe from '@/components/MapboxGlobe';
+import AuditLogDirectory from '@/components/AuditLogDirectory';
+import { InvestigationModal, FlagModal, VigilanceModal } from '@/components/ActionModals';
 
 const ComplianceDashboard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const allComplaints = complaints;
   const escalatedComplaints = complaints.filter(c => c.status === 'escalated');
   const slaBreaches = complaints.filter(c => new Date(c.slaDeadline) < new Date() && c.status !== 'resolved');
   const avgResponseHours = 48;
   const complianceScore = 72;
-
-  // All officers below compliance
   const allOfficers = users.filter(u => u.role !== 'citizen' && u.role !== 'compliance');
+
+  const [investigateCase, setInvestigateCase] = useState<Complaint | null>(null);
+  const [flagCase, setFlagCase] = useState<Complaint | null>(null);
+  const [vigilanceCase, setVigilanceCase] = useState<Complaint | null>(null);
 
   return (
     <div className="page-content space-y">
       <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gov-navy)' }}>
-        ⚖️ Compliance & Legal Authority Dashboard
+        {t('compliance.title')}
       </h2>
       <p className="text-sm text-muted">
-        Full supervisory authority over all governance levels — {user?.name}, {user?.department}
+        {t('compliance.supervising')} — {user?.name}, {user?.department}
       </p>
 
       {/* KPIs */}
       <div className="grid-4">
         <div className="gov-kpi">
           <div className="gov-kpi-value danger">{slaBreaches.length}</div>
-          <div className="gov-kpi-label">SLA Breaches</div>
+          <div className="gov-kpi-label">{t('compliance.slaBreaches')}</div>
         </div>
         <div className="gov-kpi">
           <div className="gov-kpi-value">{avgResponseHours}h</div>
-          <div className="gov-kpi-label">Avg Response Time</div>
+          <div className="gov-kpi-label">{t('compliance.avgResponse')}</div>
         </div>
         <div className="gov-kpi">
           <div className="gov-kpi-value" style={{ color: complianceScore < 75 ? 'var(--gov-danger)' : 'var(--gov-navy)' }}>
             {complianceScore}%
           </div>
-          <div className="gov-kpi-label">Compliance Score</div>
+          <div className="gov-kpi-label">{t('compliance.complianceScore')}</div>
         </div>
         <div className="gov-kpi">
           <div className="gov-kpi-value">{allComplaints.length}</div>
-          <div className="gov-kpi-label">Total Complaints</div>
+          <div className="gov-kpi-label">{t('dash.totalComplaints')}</div>
         </div>
       </div>
 
-      {/* Mapbox Globe */}
+      {/* Map */}
       <div className="gov-card">
-        <h3 className="gov-section-title">🌍 Complaint Hotspot Map (Globe View)</h3>
+        <h3 className="gov-section-title">{t('compliance.map')}</h3>
         <MapboxGlobe />
       </div>
 
       {/* AI Insights */}
       <div className="gov-card">
-        <h3 className="gov-section-title">💡 AI-Generated Insights</h3>
+        <h3 className="gov-section-title">{t('compliance.aiInsights')}</h3>
         <div className="space-y-sm">
           {aiInsights.map((insight, i) => (
             <div key={i} className="flex items-start gap-2 text-sm" style={{ padding: '4px 0' }}>
@@ -70,21 +78,21 @@ const ComplianceDashboard = () => {
         </div>
       </div>
 
-      {/* All Officers Supervision */}
+      {/* Officers */}
       <div className="gov-card">
-        <h3 className="gov-section-title">👥 All Officers Under Supervision</h3>
+        <h3 className="gov-section-title">{t('compliance.officerSupervision')}</h3>
         <div className="table-wrap">
           <table className="gov-table">
             <thead>
               <tr>
-                <th>Officer</th>
-                <th>Role</th>
-                <th>Location</th>
-                <th>Department</th>
-                <th>Cases</th>
-                <th>SLA Breaches</th>
-                <th>Performance</th>
-                <th>Actions</th>
+                <th>{t('dash.officer')}</th>
+                <th>{t('compliance.role')}</th>
+                <th>{t('dash.location')}</th>
+                <th>{t('dash.department')}</th>
+                <th>{t('compliance.cases')}</th>
+                <th>{t('compliance.slaBreaches')}</th>
+                <th>{t('dash.performance')}</th>
+                <th>{t('dash.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -102,13 +110,19 @@ const ComplianceDashboard = () => {
                     <td>{breaches > 0 ? <span className="text-danger font-semibold">{breaches}</span> : '0'}</td>
                     <td>
                       <span className={`perf-dot ${breaches === 0 ? 'perf-good' : breaches <= 1 ? 'perf-warning' : 'perf-bad'}`}></span>
-                      {breaches === 0 ? 'Good' : breaches <= 1 ? 'Warning' : 'Poor'}
+                      {breaches === 0 ? t('dash.good') : breaches <= 1 ? 'Warning' : t('dash.poor')}
                     </td>
                     <td>
                       {breaches > 0 && (
                         <div className="flex gap-1">
-                          <button className="btn btn-danger btn-sm">⚑ Flag</button>
-                          <button className="btn btn-primary btn-sm">Investigate</button>
+                          <button className="btn btn-danger btn-sm"
+                            onClick={() => setFlagCase(assigned.find(c => c.status !== 'resolved') || null)}>
+                            {t('compliance.flagOfficer')}
+                          </button>
+                          <button className="btn btn-primary btn-sm"
+                            onClick={() => setInvestigateCase(assigned[0] || null)}>
+                            {t('compliance.investigate')}
+                          </button>
                         </div>
                       )}
                     </td>
@@ -120,22 +134,22 @@ const ComplianceDashboard = () => {
         </div>
       </div>
 
-      {/* Escalated Complaints */}
+      {/* Escalated */}
       <div className="gov-card">
-        <h3 className="gov-section-title">🚨 Escalated Complaints</h3>
+        <h3 className="gov-section-title">{t('compliance.escalatedComplaints')}</h3>
         {escalatedComplaints.length === 0 ? (
-          <p className="text-sm text-muted">No escalated complaints at this time.</p>
+          <p className="text-sm text-muted">{t('compliance.noEscalated')}</p>
         ) : (
           <div className="table-wrap">
             <table className="gov-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Issue</th>
-                  <th>Priority</th>
-                  <th>Current Level</th>
-                  <th>Escalation History</th>
-                  <th>Actions</th>
+                  <th>{t('dash.id')}</th>
+                  <th>{t('dash.issue')}</th>
+                  <th>{t('dash.priority')}</th>
+                  <th>{t('compliance.currentLevel')}</th>
+                  <th>{t('compliance.escalationHistory')}</th>
+                  <th>{t('dash.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,9 +172,15 @@ const ComplianceDashboard = () => {
                     </td>
                     <td>
                       <div className="flex gap-1 flex-wrap">
-                        <button className="btn btn-danger btn-sm">⚑ Flag Officer</button>
-                        <button className="btn btn-primary btn-sm">Investigate</button>
-                        <button className="btn btn-saffron btn-sm">Send to Vigilance</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => setFlagCase(c)}>
+                          {t('compliance.flagOfficer')}
+                        </button>
+                        <button className="btn btn-primary btn-sm" onClick={() => setInvestigateCase(c)}>
+                          {t('compliance.investigate')}
+                        </button>
+                        <button className="btn btn-saffron btn-sm" onClick={() => setVigilanceCase(c)}>
+                          {t('compliance.sendVigilance')}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -171,57 +191,25 @@ const ComplianceDashboard = () => {
         )}
       </div>
 
-      {/* Full Audit Log */}
+      {/* Audit Log Directory */}
       <div className="gov-card">
-        <h3 className="gov-section-title">📜 Complete Audit Log</h3>
-        <div className="table-wrap">
-          <table className="gov-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Complaint</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditLogs.map(log => (
-                <tr key={log.id}>
-                  <td className="text-xs">{new Date(log.timestamp).toLocaleString('en-IN')}</td>
-                  <td className="text-sm">{log.actorName}</td>
-                  <td>
-                    <span className={`badge capitalize ${
-                      log.action === 'escalated' ? 'badge-escalated' :
-                      log.action === 'resolved' ? 'badge-resolved' :
-                      log.action === 'flagged' ? 'badge-emergency' :
-                      'badge-assigned'
-                    }`}>
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="font-mono text-xs">{log.complaintId}</td>
-                  <td className="text-xs">{log.result}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <h3 className="gov-section-title">{t('compliance.auditLog')}</h3>
+        <AuditLogDirectory logs={auditLogs} />
       </div>
 
       {/* SLA Breach Report */}
       <div className="gov-card">
-        <h3 className="gov-section-title">⏰ SLA Breach Report</h3>
+        <h3 className="gov-section-title">{t('compliance.slaReport')}</h3>
         <div className="table-wrap">
           <table className="gov-table">
             <thead>
               <tr>
-                <th>Complaint ID</th>
-                <th>Issue</th>
-                <th>SLA Deadline</th>
-                <th>Days Overdue</th>
-                <th>Current Level</th>
-                <th>Status</th>
+                <th>{t('dash.id')}</th>
+                <th>{t('dash.issue')}</th>
+                <th>{t('dash.slaDeadline')}</th>
+                <th>{t('compliance.daysOverdue')}</th>
+                <th>{t('compliance.currentLevel')}</th>
+                <th>{t('dash.status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -243,43 +231,38 @@ const ComplianceDashboard = () => {
         </div>
       </div>
 
-      {/* Full Analytics */}
+      {/* Charts */}
       <div className="grid-2">
         <div className="gov-card">
-          <h3 className="gov-section-title">📊 District Comparison</h3>
-          <div className="chart-container">
-            <DistrictComparisonChart data={allComplaints} />
-          </div>
+          <h3 className="gov-section-title">{t('compliance.districtComparison')}</h3>
+          <div className="chart-container"><DistrictComparisonChart data={allComplaints} /></div>
         </div>
         <div className="gov-card">
-          <h3 className="gov-section-title">📈 Monthly Trend</h3>
-          <div className="chart-container">
-            <TrendAreaChart />
-          </div>
+          <h3 className="gov-section-title">{t('compliance.trend')}</h3>
+          <div className="chart-container"><TrendAreaChart /></div>
         </div>
       </div>
 
       <div className="grid-2">
         <div className="gov-card">
-          <h3 className="gov-section-title">📊 Status Distribution</h3>
-          <div className="chart-container">
-            <StatusPieChart data={allComplaints} />
-          </div>
+          <h3 className="gov-section-title">{t('compliance.statusChart')}</h3>
+          <div className="chart-container"><StatusPieChart data={allComplaints} /></div>
         </div>
         <div className="gov-card">
-          <h3 className="gov-section-title">📊 Priority Breakdown</h3>
-          <div className="chart-container">
-            <PriorityPieChart data={allComplaints} />
-          </div>
+          <h3 className="gov-section-title">{t('compliance.priorityChart')}</h3>
+          <div className="chart-container"><PriorityPieChart data={allComplaints} /></div>
         </div>
       </div>
 
       <div className="gov-card">
-        <h3 className="gov-section-title">📊 Category Analysis</h3>
-        <div className="chart-container">
-          <CategoryBarChart data={allComplaints} />
-        </div>
+        <h3 className="gov-section-title">{t('compliance.categoryChart')}</h3>
+        <div className="chart-container"><CategoryBarChart data={allComplaints} /></div>
       </div>
+
+      {/* Modals */}
+      {investigateCase && <InvestigationModal complaint={investigateCase} onClose={() => setInvestigateCase(null)} />}
+      {flagCase && <FlagModal complaint={flagCase} onClose={() => setFlagCase(null)} />}
+      {vigilanceCase && <VigilanceModal complaint={vigilanceCase} onClose={() => setVigilanceCase(null)} />}
     </div>
   );
 };
