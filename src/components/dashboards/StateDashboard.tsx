@@ -1,62 +1,56 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { complaints, users, getPriorityBadgeClass, getStatusBadgeClass, getLevelLabel } from '@/data/mockData';
 import { DistrictComparisonChart, TrendAreaChart, PriorityPieChart, StatusPieChart } from '@/components/Charts';
 
 const StateDashboard = () => {
   const { user } = useAuth();
-  // State officer sees all complaints except compliance-level
-  const stateComplaints = complaints.filter(
-    c => c.currentLevel !== 'compliance'
-  );
+  const { t } = useLanguage();
+  const stateComplaints = complaints.filter(c => c.currentLevel !== 'compliance');
   const pending = stateComplaints.filter(c => c.status === 'pending').length;
   const escalated = stateComplaints.filter(c => c.status === 'escalated').length;
-  const resolved = stateComplaints.filter(c => c.status === 'resolved').length;
   const slaViolations = stateComplaints.filter(c => new Date(c.slaDeadline) < new Date() && c.status !== 'resolved').length;
-
-  // District officers under supervision
   const districtOfficers = users.filter(u => u.role === 'district');
 
   return (
     <div className="page-content space-y">
       <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gov-navy)' }}>
-        🏗️ State Authority Dashboard — {user?.department}
+        {t('state.title')} — {user?.department}
       </h2>
-      <p className="text-sm text-muted">Supervising District Authority officers and overseeing state-wide grievance redressal</p>
+      <p className="text-sm text-muted">{t('state.supervising')}</p>
 
-      {/* KPIs */}
       <div className="grid-4">
         <div className="gov-kpi">
           <div className="gov-kpi-value">{stateComplaints.length}</div>
-          <div className="gov-kpi-label">Total in State</div>
+          <div className="gov-kpi-label">{t('state.totalInState')}</div>
         </div>
         <div className="gov-kpi">
           <div className="gov-kpi-value">{pending}</div>
-          <div className="gov-kpi-label">Pending</div>
+          <div className="gov-kpi-label">{t('dash.pending')}</div>
         </div>
         <div className="gov-kpi">
           <div className="gov-kpi-value">{escalated}</div>
-          <div className="gov-kpi-label">Escalated</div>
+          <div className="gov-kpi-label">{t('dash.escalated')}</div>
         </div>
         <div className="gov-kpi">
           <div className="gov-kpi-value danger">{slaViolations}</div>
-          <div className="gov-kpi-label">SLA Violations</div>
+          <div className="gov-kpi-label">{t('dash.slaViolations')}</div>
         </div>
       </div>
 
-      {/* District Officers Supervision */}
       <div className="gov-card">
-        <h3 className="gov-section-title">👥 District Officers Under Supervision</h3>
+        <h3 className="gov-section-title">{t('state.officerSupervision')}</h3>
         <div className="table-wrap">
           <table className="gov-table">
             <thead>
               <tr>
-                <th>Officer</th>
-                <th>District</th>
-                <th>Department</th>
-                <th>Total Cases</th>
-                <th>Escalated</th>
-                <th>SLA Breaches</th>
-                <th>Performance</th>
+                <th>{t('dash.officer')}</th>
+                <th>{t('state.district')}</th>
+                <th>{t('dash.department')}</th>
+                <th>{t('state.totalCases')}</th>
+                <th>{t('dash.escalated')}</th>
+                <th>{t('state.slaBreaches')}</th>
+                <th>{t('dash.performance')}</th>
               </tr>
             </thead>
             <tbody>
@@ -74,7 +68,7 @@ const StateDashboard = () => {
                     <td>{slaBreaches > 0 ? <span className="text-danger font-semibold">{slaBreaches}</span> : '0'}</td>
                     <td>
                       <span className={`perf-dot ${slaBreaches === 0 ? 'perf-good' : 'perf-bad'}`}></span>
-                      {slaBreaches === 0 ? 'Good' : 'Needs Attention'}
+                      {slaBreaches === 0 ? t('dash.good') : t('dash.needsAttention')}
                     </td>
                   </tr>
                 );
@@ -84,51 +78,41 @@ const StateDashboard = () => {
         </div>
       </div>
 
-      {/* District Comparison + Trend */}
       <div className="grid-2">
         <div className="gov-card">
-          <h3 className="gov-section-title">📊 District-wise Comparison</h3>
-          <div className="chart-container">
-            <DistrictComparisonChart data={stateComplaints} />
-          </div>
+          <h3 className="gov-section-title">{t('state.districtComparison')}</h3>
+          <div className="chart-container"><DistrictComparisonChart data={stateComplaints} /></div>
         </div>
         <div className="gov-card">
-          <h3 className="gov-section-title">📈 Monthly Trend</h3>
-          <div className="chart-container">
-            <TrendAreaChart />
-          </div>
+          <h3 className="gov-section-title">{t('state.trend')}</h3>
+          <div className="chart-container"><TrendAreaChart /></div>
         </div>
       </div>
 
       <div className="grid-2">
         <div className="gov-card">
-          <h3 className="gov-section-title">📊 Priority Distribution</h3>
-          <div className="chart-container">
-            <PriorityPieChart data={stateComplaints} />
-          </div>
+          <h3 className="gov-section-title">{t('state.priorityChart')}</h3>
+          <div className="chart-container"><PriorityPieChart data={stateComplaints} /></div>
         </div>
         <div className="gov-card">
-          <h3 className="gov-section-title">📊 Status Overview</h3>
-          <div className="chart-container">
-            <StatusPieChart data={stateComplaints} />
-          </div>
+          <h3 className="gov-section-title">{t('state.statusChart')}</h3>
+          <div className="chart-container"><StatusPieChart data={stateComplaints} /></div>
         </div>
       </div>
 
-      {/* Complaints assigned to state */}
       <div className="gov-card">
-        <h3 className="gov-section-title">📋 Complaints Requiring State Intervention</h3>
+        <h3 className="gov-section-title">{t('state.stateComplaints')}</h3>
         <div className="table-wrap">
           <table className="gov-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Issue</th>
-                <th>District</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Level</th>
-                <th>Actions</th>
+                <th>{t('dash.id')}</th>
+                <th>{t('dash.issue')}</th>
+                <th>{t('state.district')}</th>
+                <th>{t('dash.priority')}</th>
+                <th>{t('dash.status')}</th>
+                <th>{t('dash.level')}</th>
+                <th>{t('dash.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -145,8 +129,8 @@ const StateDashboard = () => {
                   <td className="text-xs">{getLevelLabel(c.currentLevel)}</td>
                   <td>
                     <div className="flex gap-1 flex-wrap">
-                      <button className="btn btn-saffron btn-sm">Escalate to Compliance</button>
-                      <button className="btn btn-green btn-sm">Resolve</button>
+                      <button className="btn btn-saffron btn-sm">{t('state.escalateCompliance')}</button>
+                      <button className="btn btn-green btn-sm">{t('dash.resolve')}</button>
                     </div>
                   </td>
                 </tr>
