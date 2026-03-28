@@ -1,26 +1,20 @@
 import { useState } from 'react';
 import { announcements, importantLinks } from '@/data/mockData';
 import { useLanguage } from '@/contexts/LanguageContext';
+import SchemesDirectory from '@/components/SchemesDirectory';
+import ComplaintTracker from '@/components/ComplaintTracker';
 
 const CitizenPage = () => {
   const { t } = useLanguage();
-  const [trackingId, setTrackingId] = useState('');
   const [formData, setFormData] = useState({
     name: '', phone: '', category: 'water', title: '', description: '', location: '',
   });
   const [submitted, setSubmitted] = useState(false);
-  const [trackedComplaint, setTrackedComplaint] = useState<null | { id: string; status: string; level: string }>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 5000);
-  };
-
-  const handleTrack = () => {
-    if (trackingId.trim()) {
-      setTrackedComplaint({ id: trackingId, status: 'Assigned', level: 'Local Authority' });
-    }
   };
 
   return (
@@ -113,22 +107,7 @@ const CitizenPage = () => {
       </section>
 
       <section id="track" className="gov-card">
-        <h2 className="gov-section-title">{t('citizen.track.title')}</h2>
-        <div className="flex gap-2 items-center">
-          <div className="flex-1">
-            <label className="form-label">{t('citizen.track.inputLabel')}</label>
-            <input type="text" placeholder={t('citizen.track.inputPlaceholder')} className="form-input"
-              value={trackingId} onChange={(e) => setTrackingId(e.target.value)} />
-          </div>
-          <button onClick={handleTrack} className="btn btn-saffron" style={{ marginTop: '20px' }}>{t('citizen.track.button')}</button>
-        </div>
-        {trackedComplaint && (
-          <div className="alert alert-info" style={{ marginTop: '16px' }}>
-            <p className="text-sm"><strong>{t('citizen.track.inputLabel')}:</strong> {trackedComplaint.id}</p>
-            <p className="text-sm"><strong>{t('citizen.track.status')}:</strong> {trackedComplaint.status}</p>
-            <p className="text-sm"><strong>{t('citizen.track.level')}:</strong> {trackedComplaint.level}</p>
-          </div>
-        )}
+        <ComplaintTracker />
       </section>
 
       <section className="gov-card">
@@ -156,6 +135,8 @@ const CitizenPage = () => {
           ))}
         </div>
       </section>
+
+      <SchemesDirectory />
     </div>
   );
 };
