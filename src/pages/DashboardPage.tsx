@@ -1,9 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import LocalDashboard from '@/components/dashboards/LocalDashboard';
-import DistrictDashboard from '@/components/dashboards/DistrictDashboard';
-import StateDashboard from '@/components/dashboards/StateDashboard';
-import ComplianceDashboard from '@/components/dashboards/ComplianceDashboard';
+import DatabaseComplaintsDashboard from '@/components/DatabaseComplaintsDashboard';
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -14,13 +11,13 @@ const DashboardPage = () => {
 
   switch (user.role) {
     case 'local':
-      return <LocalDashboard />;
+      return <DatabaseComplaintsDashboard supervisorLevel="local" />;
     case 'district':
-      return <DistrictDashboard />;
+      return <DatabaseComplaintsDashboard supervisorLevel="district" />;
     case 'state':
-      return <StateDashboard />;
+      return <DatabaseComplaintsDashboard supervisorLevel="state" />;
     case 'compliance':
-      return <ComplianceDashboard />;
+      return <DatabaseComplaintsDashboard supervisorLevel="compliance" />;
     default:
       return <Navigate to="/login" replace />;
   }

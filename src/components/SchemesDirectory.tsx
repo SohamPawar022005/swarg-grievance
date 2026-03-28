@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Scheme, schemesData, filterSchemes, getUniqueMistries, getUniqueStates, getUniqueSchemeTypes } from '@/data/schemesData';
+import { getSchemesBatch } from '@/services/schemes';
 
 const SchemesDirectory = () => {
   const { t } = useLanguage();
@@ -15,22 +16,83 @@ const SchemesDirectory = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [expandedScheme, setExpandedScheme] = useState<string | null>(null);
   const [showAddSchemeModal, setShowAddSchemeModal] = useState<boolean>(false);
+  const [directorySchemes, setDirectorySchemes] = useState<Scheme[]>(schemesData);
+  const [loadingSchemes, setLoadingSchemes] = useState<boolean>(true);
+  const [loadingMoreSchemes, setLoadingMoreSchemes] = useState<boolean>(false);
+  const [schemesError, setSchemesError] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const ministries = useMemo(() => getUniqueMistries(schemesData), []);
-  const states = useMemo(() => getUniqueStates(schemesData), []);
-  const schemeTypes = useMemo(() => getUniqueSchemeTypes(schemesData), []);
+  const BATCH_SIZE = 50;
+  const PAGE_SIZE = 100;
+
+  useEffect(() => {
+    const loadSchemes = async () => {
+      setLoadingSchemes(true);
+      setSchemesError('');
+
+      try {
+        let offset = 0;
+        let allSchemes: Scheme[] = [];
+
+        while (true) {
+          setLoadingMoreSchemes(offset > 0);
+          const batch = await getSchemesBatch(BATCH_SIZE, offset);
+
+          if (batch.length === 0) {
+            break;
+          }
+
+          allSchemes = [...allSchemes, ...batch];
+          setDirectorySchemes(allSchemes);
+          offset += BATCH_SIZE;
+
+          if (batch.length < BATCH_SIZE) {
+            break;
+          }
+        }
+      } catch {
+        setSchemesError('Unable to load schemes from server. Showing local dataset.');
+      } finally {
+        setLoadingSchemes(false);
+        setLoadingMoreSchemes(false);
+      }
+    };
+
+    loadSchemes();
+  }, []);
+
+  const ministries = useMemo(() => getUniqueMistries(directorySchemes), [directorySchemes]);
+  const states = useMemo(() => getUniqueStates(directorySchemes), [directorySchemes]);
+  const schemeTypes = useMemo(() => getUniqueSchemeTypes(directorySchemes), [directorySchemes]);
 
   const filteredSchemes = useMemo(
     () => filterSchemes(
-      schemesData,
+      directorySchemes,
       selectedMinistry || undefined,
       selectedState || undefined,
       selectedType || undefined,
       selectedBeneficiary || undefined,
       searchTerm || undefined
     ),
-    [selectedMinistry, selectedState, selectedType, selectedBeneficiary, searchTerm]
+    [directorySchemes, selectedMinistry, selectedState, selectedType, selectedBeneficiary, searchTerm]
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredSchemes.length / PAGE_SIZE));
+
+  const paginatedSchemes = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredSchemes.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredSchemes, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedMinistry, selectedState, selectedType, selectedBeneficiary, searchTerm]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleReset = () => {
     setSelectedMinistry('');
@@ -219,15 +281,25 @@ const SchemesDirectory = () => {
 
       {/* Results Summary */}
       <div style={{ marginBottom: '16px', padding: '8px 0' }}>
+        {loadingSchemes && (
+          <p className="text-sm" style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
+            Loading schemes...
+          </p>
+        )}
+        {schemesError && (
+          <p className="text-sm" style={{ color: '#b45309', marginBottom: '8px' }}>
+            {schemesError}
+          </p>
+        )}
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          {t('scheme.showingResults')}: <strong>{filteredSchemes.length}</strong> {t('scheme.of')} <strong>{schemesData.length}</strong>
+          {t('scheme.showingResults')}: <strong>{filteredSchemes.length}</strong> {t('scheme.of')} <strong>{directorySchemes.length}</strong>
         </p>
       </div>
 
       {/* Schemes List */}
       <div>
         {filteredSchemes.length > 0 ? (
-          filteredSchemes.map((scheme: Scheme) => (
+          paginatedSchemes.map((scheme: Scheme) => (
             <SchemeCard key={scheme.id} scheme={scheme} />
           ))
         ) : (
@@ -238,6 +310,30 @@ const SchemesDirectory = () => {
           </div>
         )}
       </div>
+
+      {filteredSchemes.length > PAGE_SIZE && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', gap: '12px' }}>
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '12px' }}
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+          >
+            Previous
+          </button>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: 0 }}>
+            Page {currentPage} of {totalPages} (100 schemes per page)
+          </p>
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '12px' }}
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Compliance Officer Add Scheme Button */}
       {isComplianceOfficer && (

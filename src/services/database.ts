@@ -44,8 +44,8 @@ export interface AuditLog {
   timestamp: string;
 }
 
-// Base API URL - Update this with your backend URL
-const API_BASE_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Vite exposes env vars via import.meta.env using the VITE_ prefix.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 /**
  * Fetch all complaints from database

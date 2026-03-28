@@ -3,6 +3,7 @@ import { announcements, importantLinks } from '@/data/mockData';
 import { useLanguage } from '@/contexts/LanguageContext';
 import SchemesDirectory from '@/components/SchemesDirectory';
 import ComplaintTracker from '@/components/ComplaintTracker';
+import { createComplaint } from '@/services/database';
 
 const CitizenPage = () => {
   const { t } = useLanguage();
@@ -10,11 +11,54 @@ const CitizenPage = () => {
     name: '', phone: '', category: 'water', title: '', description: '', location: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdSessionId, setCreatedSessionId] = useState<string>('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    const transcript = [
+      `Title: ${formData.title}`,
+      `Description: ${formData.description}`,
+      `Category: ${formData.category}`,
+      `Location: ${formData.location}`,
+      `Citizen: ${formData.name}`,
+      `Phone: ${formData.phone}`,
+    ].join(' | ');
+
+    try {
+      const complaint = await createComplaint({
+        transcript,
+        language_code: 'en',
+        language_name: 'English',
+        urgency_level: 'medium',
+        urgency_score: 0.5,
+        keywords: `${formData.category},${formData.location}`,
+      });
+
+      if (!complaint) {
+        throw new Error('Unable to register complaint. Please try again.');
+      }
+
+      setCreatedSessionId(complaint.session_id);
+      setSubmitted(true);
+      setFormData({
+        name: '',
+        phone: '',
+        category: 'water',
+        title: '',
+        description: '',
+        location: '',
+      });
+      setTimeout(() => setSubmitted(false), 7000);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit complaint');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -58,10 +102,15 @@ const CitizenPage = () => {
         {submitted ? (
           <div className="alert alert-success">
             <p className="font-semibold" style={{ color: 'var(--gov-green)' }}>{t('citizen.form.success')}</p>
-            <p className="text-sm">{t('citizen.form.successId')}</p>
+            <p className="text-sm">{t('citizen.form.successId')} {createdSessionId ? `(${createdSessionId})` : ''}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
+            {submitError && (
+              <div className="alert alert-danger" style={{ marginBottom: '12px' }}>
+                <p className="text-sm">{submitError}</p>
+              </div>
+            )}
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">{t('citizen.form.name')}</label>
@@ -101,7 +150,9 @@ const CitizenPage = () => {
               <textarea required rows={4} className="form-textarea" value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
             </div>
-            <button type="submit" className="btn btn-primary">{t('citizen.form.submit')}</button>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : t('citizen.form.submit')}
+            </button>
           </form>
         )}
       </section>
